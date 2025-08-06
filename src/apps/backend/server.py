@@ -40,7 +40,6 @@ except WorkerClientConnectionError as e:
 
 
 # Apply ProxyFix to interpret `X-Forwarded` headers if enabled in configuration
-# Visit: https://flask.palletsprojects.com/en/stable/deploying/proxy_fix/ for more information
 if ConfigService.has_value("is_server_running_behind_proxy") and ConfigService[bool].get_value(
     "is_server_running_behind_proxy"
 ):
@@ -58,7 +57,26 @@ api_blueprint.register_blueprint(account_blueprint)
 task_blueprint = TaskRestApiServer.create()
 api_blueprint.register_blueprint(task_blueprint)
 
-app.register_blueprint(api_blueprint)
+# Comment this line if api_blueprint is already registered elsewhere
+# app.register_blueprint(api_blueprint)
+
+# Do not re-register these either if they were already registered
+# app.register_blueprint(img_assets_blueprint)
+# app.register_blueprint(react_blueprint)
+
+
+
+
+
+
+@app.errorhandler(AppError)
+def handle_error(exc: AppError) -> ResponseReturnValue:
+    return jsonify({"message": exc.message, "code": exc.code}), exc.http_code or 500
+
+
+@app.route("/")
+def index():
+    return jsonify({"message": "✅ Flask backend is running!"})
 
 # Register frontend elements
 app.register_blueprint(img_assets_blueprint)
@@ -68,3 +86,20 @@ app.register_blueprint(react_blueprint)
 @app.errorhandler(AppError)
 def handle_error(exc: AppError) -> ResponseReturnValue:
     return jsonify({"message": exc.message, "code": exc.code}), exc.http_code or 500
+
+
+@app.route("/")
+def health_check():
+    return jsonify({"message": "✅ Flask backend is running!"})
+
+
+# At the very end of server.py
+print("\n--- Registered Routes ---")
+print(app.url_map)
+print("-------------------------\n")
+
+# Print all registered routes at startup
+print("\nRegistered Routes:")
+for rule in app.url_map.iter_rules():
+    print(f"{rule.endpoint:30s} {rule.methods} {rule}")
+print()
